@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TK电商生图工作台</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <span class="logo-icon">🎯</span>
+                <h1>TK电商生图工作台</h1>
+            </div>
+            <div class="header-right">
+                <div class="connection-status" id="connectionStatus">
+                    <span class="status-dot disconnected" id="statusDot"></span>
+                    <span class="status-text" id="statusText">未配置</span>
+                </div>
+                <button class="settings-btn" id="settingsBtn" onclick="openSettings()">⚙ 设置</button>
+            </div>
+        </header>
+
+        <!-- Settings Modal -->
+        <div class="modal-overlay" id="settingsModal" style="display:none">
+            <div class="modal-content" style="max-height:85vh;overflow-y:auto">
+                <div class="modal-header">
+                    <h2>⚙ API设置</h2>
+                    <button class="modal-close" onclick="closeSettings()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-section-title">🔗 API连接</div>
+                    <div class="setting-group">
+                        <label class="setting-label">API Key</label>
+                        <div class="setting-input-row">
+                            <input type="password" id="apiKeyInput" placeholder="sk-... 输入你的API Key" class="setting-input">
+                            <button class="btn-sm" onclick="toggleKeyVisibility()">👁</button>
+                        </div>
+                        <p class="setting-hint">支持OpenAI官方Key或第三方代理Key</p>
+                    </div>
+                    <div class="setting-group">
+                        <label class="setting-label">API代理地址 (Base URL)</label>
+                        <input type="text" id="baseUrlInput" placeholder="留空=OpenAI官方(api.openai.com)" class="setting-input" style="width:100%">
+                        <p class="setting-hint">用第三方代理填这里，如 https://xiaoxinai.xyz</p>
+                    </div>
+
+                    <div class="settings-section-title">👁 识图模型</div>
+                    <div class="setting-group">
+                        <label class="setting-label">识图模型名称</label>
+                        <input type="text" id="visionModelInput" placeholder="gpt-4o" class="setting-input" style="width:100%">
+                        <p class="setting-hint">官方填 gpt-4o；代理可能需要其他名称。如果识图不可用，用"手动模式"代替</p>
+                    </div>
+
+                    <div class="settings-section-title">🎨 生图模型</div>
+                    <div class="setting-group">
+                        <label class="setting-label">生图模型</label>
+                        <select id="imageModelSelect" class="setting-select">
+                            <option value="gpt-image-1">GPT Image 1（性价比推荐）</option>
+                            <option value="gpt-image-2" selected>GPT Image 2（最新最强）</option>
+                            <option value="dall-e-3">DALL-E 3（成熟稳定）</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label class="setting-label">图片尺寸</label>
+                        <select id="imageSizeSelect" class="setting-select">
+                            <option value="1024x1024" selected>1024x1024 方图（TK标准）</option>
+                            <option value="1536x1024">1536x1024 横版</option>
+                            <option value="1024x1536">1024x1536 竖版</option>
+                        </select>
+                    </div>
+
+                    <div class="settings-section-title">🌍 目标市场</div>
+                    <div class="setting-group">
+                        <label class="setting-label">目标市场</label>
+                        <select id="targetMarketSelect" class="setting-select">
+                            <option value="southeast_asia" selected>东南亚（泰国/越南/菲律宾）</option>
+                            <option value="us">美国</option>
+                            <option value="eu">欧洲</option>
+                            <option value="global">多市场通用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" onclick="testConnection()">🔌 测试连接</button>
+                    <button class="btn-primary" onclick="saveSettingsFromUI()">💾 保存设置</button>
+                </div>
+                <div class="test-result" id="testResult" style="display:none"></div>
+            </div>
+        </div>
+
+        <!-- Step 1: Upload Product Image -->
+        <section class="step-section" id="step1Upload">
+            <div class="step-header">
+                <span class="step-num">1</span>
+                <h2>上传产品原图</h2>
+                <span class="step-hint">所有生图都将基于这张产品图保持风格一致</span>
+            </div>
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-placeholder">
+                    <div class="upload-icon">📷</div>
+                    <p>拖拽产品图片到这里，或点击上传</p>
+                    <p class="upload-hint">支持 JPG / PNG / WebP，建议上传清晰白底产品图</p>
+                </div>
+                <input type="file" id="fileInput" accept="image/*" hidden>
+            </div>
+            <div class="upload-preview" id="uploadPreview" style="display:none">
+                <img id="previewImage" alt="产品图预览">
+                <div class="preview-actions">
+                    <p id="uploadedFileName" style="color:var(--text-secondary);font-size:13px;"></p>
+                    <div class="preview-buttons">
+                        <button class="btn-secondary" onclick="resetUpload()">重新上传</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 2: Select Mode -->
+        <section class="step-section" id="step2Mode" style="display:none">
+            <div class="step-header">
+                <span class="step-num">2</span>
+                <h2>选择处理方式</h2>
+            </div>
+            <div class="mode-selector">
+                <button class="mode-btn" id="aiModeBtn" onclick="selectMode('ai')">
+                    🤖 AI智能识图
+                    <span class="mode-btn-hint">GPT-4o自动分析产品特征</span>
+                </button>
+                <button class="mode-btn" id="manualModeBtn" onclick="selectMode('manual')">
+                    ✍️ 手动填写信息
+                    <span class="mode-btn-hint">自己填写产品材质、颜色等信息</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 3a: AI Analyze -->
+        <section class="step-section" id="step3AI" style="display:none">
+            <div class="step-header">
+                <span class="step-num">3</span>
+                <h2>AI识图分析</h2>
+            </div>
+            <p style="color:var(--text-secondary);margin-bottom:16px;">AI将自动识别已上传的产品图，提取材质、颜色、风格等关键信息</p>
+            <div class="form-group" style="max-width:400px;margin-bottom:16px;">
+                <label class="form-label">产品名称（可选，用于文件夹命名）</label>
+                <input type="text" id="productNameInputAI" placeholder="如：星星项链" class="form-input">
+            </div>
+            <div class="form-actions" style="justify-content:flex-start;">
+                <button class="btn-primary btn-large" onclick="analyzeImage()">🔍 开始识图分析</button>
+            </div>
+        </section>
+
+        <!-- Step 3b: Manual Input -->
+        <section class="step-section" id="step3Manual" style="display:none">
+            <div class="step-header">
+                <span class="step-num">3</span>
+                <h2>填写产品信息</h2>
+            </div>
+            <div class="manual-layout">
+                <div class="manual-image-col">
+                    <img id="manualPreviewImage" alt="参考产品图">
+                    <p style="color:var(--text-muted);font-size:12px;margin-top:8px;text-align:center;">参考产品图</p>
+                </div>
+                <div class="manual-form-col">
+                    <div class="product-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">产品名称 *</label>
+                                <input type="text" id="manualProductName" placeholder="如：项链、手链、耳环" class="form-input" value="项链">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">英文名称</label>
+                                <input type="text" id="manualProductEn" placeholder="如：silver necklace" class="form-input" value="silver necklace">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">产品类型 *</label>
+                                <select id="manualProductType" class="form-input">
+                                    <option value="项链" selected>项链</option>
+                                    <option value="手链">手链</option>
+                                    <option value="戒指">戒指</option>
+                                    <option value="耳环">耳环</option>
+                                    <option value="胸针">胸针</option>
+                                    <option value="脚链">脚链</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">材质</label>
+                                <input type="text" id="manualMaterial" placeholder="如：925银、合金镀金" class="form-input" value="925银">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">主要颜色</label>
+                                <input type="text" id="manualColor" placeholder="如：银白色、金色" class="form-input" value="银白色">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">风格</label>
+                                <input type="text" id="manualStyle" placeholder="如：简约、复古、波西米亚" class="form-input" value="简约">
+                            </div>
+                        </div>
+                        <div class="form-group full-width">
+                            <label class="form-label">关键特征（逗号分隔）</label>
+                            <input type="text" id="manualFeatures" placeholder="如：星星吊坠,纤细链身,防过敏" class="form-input" value="星星吊坠,纤细链身,防过敏">
+                        </div>
+                        <div class="form-group full-width">
+                            <label class="form-label">细节描述</label>
+                            <textarea id="manualDetail" class="form-input" rows="2" placeholder="如：星星吊坠微雕工艺，链身0.8mm纤细">星星吊坠微雕工艺，链身0.8mm纤细</textarea>
+                        </div>
+                        <div class="form-actions" style="justify-content:flex-start;">
+                            <button class="btn-primary btn-large" onclick="submitManualInfo()">� 生成提示词</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 4: Analysis Result -->
+        <section class="step-section" id="step4Analysis" style="display:none">
+            <div class="step-header">
+                <span class="step-num">4</span>
+                <h2>产品信息</h2>
+                <span class="step-badge" id="productBadge"></span>
+            </div>
+            <div class="analysis-grid" id="analysisGrid"></div>
+        </section>
+
+        <!-- Step 5: Prompt Editing -->
+        <section class="step-section" id="step5Prompts" style="display:none">
+            <div class="step-header">
+                <span class="step-num">5</span>
+                <h2>提示词编辑</h2>
+                <span class="step-hint">已自动加入产品一致性约束，可逐条修改</span>
+            </div>
+            <div class="prompts-container" id="promptsContainer"></div>
+            <div class="generate-actions">
+                <button id="generateAllBtn" class="btn-primary btn-large" onclick="generateAll()">🚀 一键生成全部（6张并发）</button>
+                <button id="savePromptsBtn" class="btn-secondary" onclick="savePrompts()">💾 保存提示词</button>
+            </div>
+        </section>
+
+        <!-- Step 6: Results -->
+        <section class="step-section" id="step6Results" style="display:none">
+            <div class="step-header">
+                <span class="step-num">6</span>
+                <h2>生成结果</h2>
+                <span class="result-count" id="resultCount"></span>
+            </div>
+            <div class="results-grid" id="resultsGrid"></div>
+            <div class="results-actions" id="resultsActions" style="display:none">
+                <button class="btn-primary btn-large" onclick="downloadAll()">📦 下载全部</button>
+                <button class="btn-secondary" onclick="regenerateAll()">🔄 重新生成</button>
+            </div>
+        </section>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display:none">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <p id="loadingText">正在分析产品图片...</p>
+                <div class="loading-progress" id="loadingProgress" style="display:none">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p id="progressText">0 / 6 张已生成</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div class="toast" id="toast" style="display:none">
+            <span id="toastText"></span>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
