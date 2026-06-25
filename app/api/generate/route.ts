@@ -6,28 +6,19 @@ export async function POST(request: Request) {
 
     if (!prompt) {
       return NextResponse.json(
-        { error: "Prompt is required" },
+        { error: "请提供提示词" },
         { status: 400 }
       );
     }
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    const colors: Record<string, string[]> = {
-      Professional: ["#FFFFFF", "#F5F5F5", "#333333"],
-      "Lifestyle SEA": ["#06D6A0", "#FFD166", "#EF476F"],
-      "TikTok Viral": ["#25F4EE", "#FE2C55", "#FF0050"],
-      "Minimalist Clean": ["#FAF9F6", "#E8E4E1", "#8B8680"]
-    };
-
-    const colorSet = colors[style as keyof typeof colors] || colors["TikTok Viral"];
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     return NextResponse.json({
       success: true,
       imageUrl: null,
-      style: style || "TikTok Viral",
+      style: style || "TikTok爆款风",
       promptUsed: prompt,
-      colors: colorSet,
+      colors: ["#25F4EE", "#FE2C55", "#FF0050"],
       dimensions: {
         width: 1024,
         height: 1024
@@ -35,7 +26,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: "Failed to generate image" },
+      { error: "图片生成失败" },
       { status: 500 }
     );
   }

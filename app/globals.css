@@ -4,8 +4,8 @@
 
 :root {
   --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --background-start-rgb: 22, 24, 35;
+  --background-end-rgb: 10, 12, 20;
 }
 
 body {
@@ -29,4 +29,21 @@ body {
   .bg-tiktok-gradient {
     background: linear-gradient(90deg, #25F4EE 0%, #FE2C55 100%);
   }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #161823;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4B5563;
 }
